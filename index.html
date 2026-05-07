@@ -237,6 +237,17 @@ hr{border:none;border-top:1px solid rgba(255,255,255,.07);margin:10px 0}
 .preview-stretch-dur{background:var(--surface2);border-radius:8px;padding:4px 9px;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0}
 .preview-footer{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-top:1px solid rgba(255,255,255,.08);padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));display:flex;gap:10px}
 
+/* HOW-TO MODAL */
+.howto-step{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.howto-step:last-child{border:none}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.mistake-item{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:13px;color:var(--muted)}
+.yt-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;background:#ff0000;border:none;color:#fff;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:14px;text-decoration:none}
+
+/* SIMILAR SESSIONS */
+.similar-card{background:var(--surface2);border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px;cursor:pointer;border:2px solid transparent;transition:border-color .2s;margin-bottom:8px}
+.similar-card:active{border-color:var(--accent)}
+
 /* BUILDER OVERLAY */
 .builder-overlay{position:fixed;inset:0;background:var(--bg);z-index:250;display:none;flex-direction:column;max-width:430px;margin:0 auto;animation:fadeIn .2s ease}
 .builder-overlay.open{display:flex}
@@ -445,6 +456,33 @@ hr{border:none;border-top:1px solid rgba(255,255,255,.07);margin:10px 0}
   <!-- Save footer -->
   <div class="builder-footer">
     <button onclick="saveCustomWorkout()" style="width:100%;padding:15px;background:var(--accent);border:none;color:#fff;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer">Save Workout</button>
+  </div>
+</div>
+
+<!-- HOW-TO MODAL -->
+<div class="modal-overlay" id="howto-modal">
+  <div class="modal" style="max-height:88vh">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div>
+        <h3 id="howto-name" style="font-size:17px"></h3>
+        <div id="howto-meta" style="font-size:12px;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <button class="modal-close" onclick="closeHowto()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="howto-tip" style="font-size:13px;color:var(--muted);background:rgba(255,255,255,.05);padding:12px;border-radius:10px;line-height:1.5;margin-bottom:14px"></div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">Step-by-Step</div>
+      <div id="howto-steps"></div>
+      <div id="howto-mistakes-wrap" style="margin-top:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">Common Mistakes</div>
+        <div id="howto-mistakes"></div>
+      </div>
+      <a id="howto-yt" href="#" target="_blank" class="yt-btn">
+        <svg width="20" height="14" viewBox="0 0 20 14" fill="white"><path d="M19.6 2.2C19.4 1.4 18.8.8 18 .6 16.4.2 10 .2 10 .2S3.6.2 2 .6C1.2.8.6 1.4.4 2.2.1 3.8 0 7 0 7s.1 3.2.4 4.8c.2.8.8 1.4 1.6 1.6C3.6 13.8 10 13.8 10 13.8s6.4 0 8-.4c.8-.2 1.4-.8 1.6-1.6.3-1.6.4-4.8.4-4.8s-.1-3.2-.4-4.8zM8 10V4l5.3 3L8 10z"/></svg>
+        Watch on YouTube
+      </a>
+    </div>
   </div>
 </div>
 
@@ -895,7 +933,23 @@ function previewSession(sessionId){
     </div>
     <div style="height:16px"></div>`;
 
-  document.getElementById('preview-body').innerHTML = stretchHTML + exHTML;
+  // Similar sessions
+  const similar = getSimilarSessions(sessionId);
+  const similarHTML = similar.length ? `
+    <div class="preview-section" style="margin-top:10px">Similar Sessions</div>
+    <div style="padding:0 14px">
+      ${similar.map(s=>`
+        <div class="similar-card" onclick="previewSession('${s.id}')">
+          <div style="font-size:26px">${s.emoji||'🏋️'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700">${s.name}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">${s.subtitle||''}</div>
+          </div>
+          <div style="color:var(--muted);font-size:18px">›</div>
+        </div>`).join('')}
+    </div>` : '';
+
+  document.getElementById('preview-body').innerHTML = stretchHTML + exHTML + similarHTML;
   document.getElementById('preview-overlay').classList.add('open');
 }
 
@@ -1111,6 +1165,7 @@ function renderExercises(session){
         <div class="exercise-actions">
           <button class="btn-sm btn-add" onclick="addSet('${origId}')">+ Add Set</button>
           <button class="btn-sm btn-swap" onclick="openSwapModal('${origId}')">↔ Swap</button>
+          <button class="btn-sm" style="background:rgba(255,255,255,.08);color:var(--text);flex:0 0 auto;padding:9px 12px" onclick="openHowto('${exId}')">▶ How to</button>
         </div>
       </div>
     </div>`;
@@ -1679,6 +1734,106 @@ function saveCustomWorkout(){
   saveCustomSessions(customs);
   closeBuilder();
   renderHome();
+}
+
+// ===================== HOW-TO GUIDE =====================
+const EXERCISE_DETAILS = {
+  'barbell-bench':{steps:['Lie flat on bench, feet on floor, retract shoulder blades','Grip bar just outside shoulder width, unrack with arms straight','Lower bar slowly to mid-chest, elbows at ~60° from torso','Drive bar back up explosively — don\'t lock elbows fully'],mistakes:['Flaring elbows 90° out (strains shoulders)','Losing back arch or lifting feet off the floor']},
+  'incline-dumbbell':{steps:['Set bench to 30–45°, sit back with dumbbells on thighs','Kick dumbbells up as you lie back, palms facing forward','Lower under control until elbows are just below bench level','Press up and in so dumbbells nearly touch at the top'],mistakes:['Setting incline too steep — turns it into a shoulder press','Letting dumbbells drift too far back at the bottom']},
+  'cable-fly':{steps:['Set both pulleys to chest height, stand in centre','Hold handles with slight elbow bend — maintain it throughout','Bring hands together in a wide arc, squeezing chest hard','Control the stretch back out — don\'t let cables yank you open'],mistakes:['Bending and straightening elbows (that\'s a press, not a fly)','Using too much weight and losing range of motion']},
+  'barbell-ohp':{steps:['Grip bar just outside shoulders, bar resting on upper chest','Brace core and glutes, press bar straight overhead','At the top, push your head slightly through for balance','Lower bar back to clavicle level — controlled descent'],mistakes:['Pressing in front of body instead of over it (lower back arches)','Not bracing core — leads to excessive lumbar extension']},
+  'lateral-raise':{steps:['Stand tall, slight bend at elbow, palms facing down','Raise arms out to sides — lead with elbows, not hands','Stop at shoulder height, hold 1 second at the top','Lower slowly over 2–3 seconds for maximum tension'],mistakes:['Shrugging shoulders up as you raise (uses traps not delts)','Swinging or using momentum — slow it down']},
+  'tricep-pushdown':{steps:['Set cable to high pulley, grip bar with overhand grip','Pin elbows at your sides — they must not move','Push bar down until arms are fully extended','Slowly return — feel the long head stretch at the top'],mistakes:['Elbows drifting forward as weight gets heavy','Leaning into the cable — keep torso upright']},
+  'skull-crushers':{steps:['Lie on bench, hold EZ bar over chest with arms straight','Hinge only at the elbows, lowering bar toward your forehead','Stop just above forehead — don\'t let upper arms drift back','Press back to start by contracting triceps fully'],mistakes:['Upper arms drifting back (turns it into a pullover)','Going too heavy before nailing the elbow-hinge form']},
+  'deadlift':{steps:['Stand with bar over mid-foot, hip-width stance','Hinge down: grip bar just outside legs, chest up, hips low','Take a big breath, brace, then push the floor away','Hips and shoulders rise together — lock out at the top'],mistakes:['Rounding the lower back (most common, most dangerous)','Jerking the bar off the floor instead of building tension first']},
+  'lat-pulldown':{steps:['Sit with thighs under pads, grip bar wider than shoulders','Depress and retract shoulder blades before you pull','Pull bar to upper chest, leading with elbows — not hands','Slowly extend arms back to full stretch at the top'],mistakes:['Pulling behind the neck (spine and shoulder stress)','Letting the bar pull you up without controlling the eccentric']},
+  'barbell-row':{steps:['Hinge to ~45°, bar hanging at shin level, flat back','Grip just outside legs, retract shoulder blades first','Row bar to lower chest/navel, driving elbows back','Lower bar fully — don\'t cut the range short'],mistakes:['Jerking upright with your torso to help the weight up','Not reaching full stretch at the bottom each rep']},
+  'seated-cable-row':{steps:['Sit tall, knees slightly bent, grip handle with straight arms','Pull handle to navel, squeezing shoulder blades together hard','Hold the contraction for 1 second at full row','Slowly return — feel lats and rhomboids stretch fully'],mistakes:['Rounding forward on the way out beyond the hips','Using your lower back to generate momentum']},
+  'face-pull':{steps:['Set rope to eye level on a high cable pulley','Grip rope with thumbs pointing toward you, step back','Pull rope to face — split the rope apart as it reaches you','Elbows should finish high and wide, externally rotated'],mistakes:['Pulling to the neck instead of the face (wrong angle)','Not splitting the rope at the end — skips external rotation']},
+  'ez-bar-curl':{steps:['Stand tall, grip EZ bar at the angled outer grips','Pin elbows at sides — they should not move at all','Curl bar up in a smooth arc, fully supinating at the top','Lower slowly over 3 seconds — don\'t drop it down'],mistakes:['Swinging the torso back to help the weight up','Partial reps — always go full range top and bottom']},
+  'hammer-curl':{steps:['Hold dumbbells at sides, palms facing each other (neutral grip)','Keep elbows pinned, curl one or both dumbbells up','Stop when forearm is vertical, squeeze briefly at top','Lower under control — full extension at the bottom'],mistakes:['Rotating the wrist — keep neutral grip throughout','Swinging the dumbbells using momentum']},
+  'back-squat':{steps:['Bar on upper traps, feet shoulder-width, toes ~30° out','Brace core, push knees out, begin descent by breaking at hips and knees simultaneously','Aim for hip crease to drop below the knee at the bottom','Drive through the whole foot to stand — don\'t let knees cave in'],mistakes:['Heels rising (ankle mobility issue — elevate if needed)','Good-morning squat — hips shoot up before the bar']},
+  'rdl':{steps:['Stand tall, bar at hips, soft knee bend throughout','Hinge at hips, pushing them back — bar slides down thighs','Lower until you feel a deep hamstring stretch (mid-shin for most)','Drive hips forward to return — squeeze glutes at the top'],mistakes:['Bending the knees too much — it becomes a squat','Rounding the lower back — maintain neutral spine always']},
+  'leg-press':{steps:['Feet shoulder-width, mid-plate — not too high or low','Lower the platform until knees reach ~90°, no further','Press through the whole foot — don\'t let heels rise','Don\'t lock knees fully at the top — maintain tension'],mistakes:['Placing feet too low (shifts stress to knees)','Letting hips/lower back rise off the pad at the bottom']},
+  'leg-extension':{steps:['Adjust pad so it sits just above the ankle','Sit back fully, thighs flat on pad, hands on handles','Extend legs to fully straight — hold 1–2 seconds at top','Lower slowly over 3 seconds — full stretch at the bottom'],mistakes:['Using momentum to kick the weight up','Not achieving full extension — loses the peak contraction']},
+  'lying-leg-curl':{steps:['Lie face down, adjust pad to just above the heel','Keep hips pressed into the pad throughout','Curl heels toward glutes — full range of motion','Lower slowly, letting hamstrings fully lengthen each rep'],mistakes:['Hips rising off the pad as the weight gets heavy','Half reps — always reach full extension at the bottom']},
+  'hip-thrust':{steps:['Upper back on bench edge, bar across hips with pad','Feet flat, shoulder-width, shin vertical at top position','Drive hips up by squeezing glutes — not lower back','Hold 1–2 seconds at top, lower hips nearly to floor'],mistakes:['Hyperextending the lower back at the top (glutes, not spine)','Feet placed too far or too close — find vertical shin position']},
+  'standing-calf-raise':{steps:['Stand on the platform, balls of feet on edge, heels hanging off','Lower heels as far as possible — full stretch at the bottom','Pause 1 second in the stretch, then rise high onto toes','Hold the peak contraction for 1–2 seconds before lowering'],mistakes:['Bouncing through the bottom — no stretch, no gain','Short range partial reps — calves need full ROM to grow']},
+  'arnold-press':{steps:['Start with dumbbells at chin height, palms facing you','As you press up, rotate palms to face forward','Press to full extension overhead — don\'t lock harshly','Reverse the rotation on the way back down to chin'],mistakes:['Rushing the rotation — slow it down for full delt activation','Going too heavy and losing the rotation altogether']},
+  'front-raise':{steps:['Stand tall, dumbbells in front of thighs, palms down','Raise both arms forward to shoulder height — no higher','Hold briefly at the top, then lower with control','Keep a slight elbow bend locked throughout the movement'],mistakes:['Swinging torso back to help the weight up','Raising above shoulder height — takes tension off the front delt']},
+  'reverse-pec-deck':{steps:['Face the machine, set pad at shoulder height','Grip handles with slight elbow bend — maintain it','Fly arms back and wide — squeeze rear delts at the end','Control the return — don\'t let the weight slam'],mistakes:['Straightening the elbows fully (puts stress on the joint)','Pulling with the arms instead of driving with the rear delt']},
+  'upright-row':{steps:['Grip bar shoulder-width, bar resting against thighs','Lead with elbows — pull them up and out to shoulder height','Bar travels close to the body, reaching chin level','Lower bar under control back to thigh start position'],mistakes:['Gripping too narrow — increases wrist/shoulder impingement risk','Pulling bar to eye level — excessive for most people\'s mobility']},
+  'preacher-curl':{steps:['Adjust the pad so armpits rest at the top of the pad','Grip EZ bar, start with arms extended — full stretch','Curl up slowly, squeezing biceps hard at the top','Lower all the way back to full extension — resist the urge to stop short'],mistakes:['Not reaching full extension at the bottom (loses best stretch position)','Leaning into the pad — use it for support, not momentum']},
+  'incline-curl':{steps:['Set bench to 45°, sit back with dumbbells hanging straight down','Keep elbows behind torso throughout — this is the key stretch','Curl both arms up, fully supinating at the top','Lower slowly — let the weight fully stretch the long head'],mistakes:['Bringing elbows forward (removes the stretch advantage entirely)','Using too much weight and losing the slow eccentric']},
+  'close-grip-bench':{steps:['Grip bar shoulder-width (not too narrow — wrist stress)','Unrack and lower bar to lower chest — elbows stay close to torso','Press up while keeping elbows tracking alongside your ribs','Don\'t let elbows flare out — keep them tucked throughout'],mistakes:['Gripping too close — increases wrist and elbow pain risk','Elbows flaring wide — turns it into a regular bench press']},
+  'overhead-tricep-ext':{steps:['Set cable to low pulley, attach rope, face away','Arms overhead, grip rope behind head, elbows forward','Extend arms fully overhead — feel full tricep stretch','Hinge back only at the elbows — upper arms stay still'],mistakes:['Upper arms drifting back as you extend (uses shoulder, not tricep)','Not reaching full extension at the top of each rep']},
+};
+
+// Session muscle group tags for similarity matching
+const SESSION_MUSCLES = {
+  'push':['chest','shoulders','triceps'],
+  'pull':['back','biceps','rear delts'],
+  'legs':['quads','hamstrings','glutes','calves'],
+  'arms-shoulders':['shoulders','biceps','triceps'],
+};
+
+function getSimilarSessions(sessionId){
+  const customs = loadCustomSessions();
+  const allSessions = [...SESSIONS, ...customs];
+  const current = SESSION_MUSCLES[sessionId] || [];
+  if(current.length === 0) return [];
+  return allSessions
+    .filter(s => s.id !== sessionId)
+    .map(s => {
+      const muscles = SESSION_MUSCLES[s.id] || (s.exercises||[]).map(id=>EXERCISES[id]?.group?.toLowerCase()).filter(Boolean);
+      const overlap = current.filter(m => muscles.some(sm => sm.includes(m) || m.includes(sm))).length;
+      return {session: s, overlap};
+    })
+    .filter(x => x.overlap > 0)
+    .sort((a,b) => b.overlap - a.overlap)
+    .slice(0, 3)
+    .map(x => x.session);
+}
+
+function openHowto(exId){
+  const ex = EXERCISES[exId];
+  if(!ex) return;
+  const details = EXERCISE_DETAILS[exId];
+  const clr = GROUP_COLORS[ex.group]||'var(--accent)';
+
+  document.getElementById('howto-name').textContent = ex.name;
+  document.getElementById('howto-meta').innerHTML = `<span style="color:${clr};font-weight:700">${ex.group}</span> · ${ex.equip} · ${ex.sets} sets × ${ex.reps}`;
+  document.getElementById('howto-tip').textContent = '💡 ' + ex.tip;
+
+  const stepsEl = document.getElementById('howto-steps');
+  const steps = details?.steps || ['Set up equipment correctly','Use full range of motion','Control the eccentric (lowering) phase','Focus on the target muscle contracting'];
+  stepsEl.innerHTML = steps.map((s,i)=>`
+    <div class="howto-step">
+      <div class="step-num">${i+1}</div>
+      <div style="font-size:13px;line-height:1.5;padding-top:3px">${s}</div>
+    </div>`).join('');
+
+  const mistakesWrap = document.getElementById('howto-mistakes-wrap');
+  const mistakes = details?.mistakes;
+  if(mistakes && mistakes.length){
+    mistakesWrap.style.display = 'block';
+    document.getElementById('howto-mistakes').innerHTML = mistakes.map(m=>
+      `<div class="mistake-item">⚠️ <span>${m}</span></div>`
+    ).join('');
+  } else {
+    mistakesWrap.style.display = 'none';
+  }
+
+  const ytUrl = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.name + ' exercise form tutorial');
+  document.getElementById('howto-yt').href = ytUrl;
+
+  const modal = document.getElementById('howto-modal');
+  modal.classList.add('open');
+  modal.onclick = e => { if(e.target===modal) closeHowto(); };
+}
+
+function closeHowto(){
+  document.getElementById('howto-modal').classList.remove('open');
 }
 
 // ===================== SCHEDULE EDITOR =====================
